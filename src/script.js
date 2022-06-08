@@ -3,16 +3,46 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import * as dat from "dat.gui"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader"
-import { sRGBEncoding } from 'three'
+import { Raycaster, sRGBEncoding } from 'three'
+import { gsap } from 'gsap'
 
 // console.log(GLTFLoader)
 // console.log(THREE)
 
+// if scene ready then show points
+let sceneReady = false
+
+//fetch loading element
+const allLoading = document.querySelector('.loading-bar')
+
+// Loading Manager
+const loadingManager = new THREE.LoadingManager(
+    // Loaded
+    ()=>{
+        
+        window.setTimeout(()=>{
+            gsap.to(overlayMaterial.uniforms.uAlpha, { duration: 3, value: 0 })
+            allLoading.classList.add('ended')
+            allLoading.style.transform = ''
+        }, 500)
+
+        window.setTimeout(()=>{
+            sceneReady = true
+        }, 2000)
+        // console.log("Loaded!");
+    }, 
+    // Progress
+    (url,loadedItems, totalItems)=>{
+        const percentage = loadedItems / totalItems
+        // console.log("Progress:", percentage);
+        allLoading.style.transform = `scale(${percentage})`
+    })
+
 // Initiate GLTFLoader
-const gltfLoader = new GLTFLoader()
+const gltfLoader = new GLTFLoader(loadingManager)
 
 // For Environment Map
-const cubeTextureLoader = new THREE.CubeTextureLoader()
+const cubeTextureLoader = new THREE.CubeTextureLoader(loadingManager)
 
 // Size of Windows
 const size = {
@@ -22,9 +52,36 @@ const size = {
 
 // Dat GUI
 const gui = new dat.GUI()
+gui.closed = true           // default gui will be closed
 
 // Scene
 const scene = new THREE.Scene()
+
+/**
+ * Overlay
+ */
+const overlayGeomatery = new THREE.PlaneBufferGeometry(2, 2, 1, 1)
+const overlayMaterial = new THREE.ShaderMaterial({
+    transparent: true,
+    uniforms: {
+        uAlpha: { value: 1 }
+    },
+    vertexShader: `
+        void main(){
+            gl_Position = vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: `
+        uniform float uAlpha;
+        void main(){
+            gl_FragColor = vec4(0.0, 0.0, 0.0, uAlpha);
+        }
+    `
+})
+const overlay = new THREE.Mesh(overlayGeomatery, overlayMaterial)
+scene.add(overlay)
+
+
 
 // Camera
 const camera = new THREE.PerspectiveCamera(75, size.width/size.hight)
@@ -60,18 +117,41 @@ scene.environment = environmentMap
  * Load Flight Model
  */
  gltfLoader.load(
-    //  "/model/damagedHelmet/DamagedHelmet.gltf",
-     "/model/flightHelmet/FlightHelmet.gltf",
+     "/model/damagedHelmet/DamagedHelmet.gltf",
+    //  "/model/flightHelmet/FlightHelmet.gltf",
      (model) => {
-        console.log(model);
-        model.scene.scale.set(10, 10, 10)
-        model.scene.position.set(0,-4,0)
-        model.scene.rotation.y = Math.PI * 0.5
+        // console.log(model);
+        model.scene.scale.set(4, 4, 4)
+        model.scene.position.set(0,0,0)
+        // model.scene.rotation.y = Math.PI * 0.5
         scene.add(model.scene)
 
         gui.add(model.scene.rotation, 'y').name("Helmet Rotation").min(-Math.PI).max(Math.PI).step(0.001)
      }
  )
+
+/**
+ * Raycaster for points hidden
+ */
+const raycaster = new Raycaster()
+
+ /**
+  * Points of Intrest
+  */
+ const points = [
+    {
+        position: new THREE.Vector3(1.7, 0.3, 2),
+        element: document.querySelector('.point-0')
+    },
+    {
+        position: new THREE.Vector3(-1.7, -1.3, 2),
+        element: document.querySelector('.point-1')
+    },
+    {
+        position: new THREE.Vector3(0, -1.3, -2),
+        element: document.querySelector('.point-2')
+    }
+ ]
 
 
 // Direction Light 
@@ -98,17 +178,52 @@ gui.add(directionalLight.position, 'z').name("R_light Z").min(-5).max(5).step(0.
 // Renderer
 const renderer = new THREE.WebGLRenderer({ canvas })
 renderer.setSize(size.width, size.hight)
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+// renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 renderer.physicallyCorrectLights = true
 renderer.outputEncoding = sRGBEncoding
-// renderer.toneMapping = THREE.LinearToneMapping
+renderer.toneMapping = THREE.LinearToneMapping
 renderer.render(scene, camera)
 
 
 // AnimationEffect
 const Animation = () => {
-
+    // console.log("Zubiii");
     control.update()
+
+    // if scene ready then add the points
+    if(sceneReady){
+        // Control the points 
+        for(const point of points){
+            const screenPosition = point.position.clone()
+            screenPosition.project(camera)
+            // console.log("screenPosition: ", screenPosition)
+
+            // set raycaster as at camera position 
+            raycaster.setFromCamera(screenPosition, camera)
+            const intersect = raycaster.intersectObjects(scene.children, true)
+
+            // if nothing intersects then show the points
+            if(intersect.length === 0){
+                point.element.classList.add('visible')
+            }else{
+                const intersectionDistance = intersect[0].distance
+                const pointDistance = point.position.distanceTo(camera.position)
+                // console.log("intersectionDistance: ", intersectionDistance, "pointDistance: ", pointDistance)
+
+                if(intersectionDistance>pointDistance){                     // LOGIC:: if the intersection distance is more then visible else hide
+                    point.element.classList.add('visible')
+                }else{
+                    point.element.classList.remove('visible')
+                }
+            }
+
+            const translateX = screenPosition.x * size.width * 0.5
+            const translateY = - screenPosition.y * size.hight * 0.5
+            point.element.style.transform = `translateX(${translateX}px) translateY(${translateY}px)`
+            // console.log("translateX:", translateX);
+        }
+    }
+
     renderer.render(scene, camera)
     window.requestAnimationFrame(Animation)
 }
