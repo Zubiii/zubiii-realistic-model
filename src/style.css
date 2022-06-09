@@ -52,7 +52,7 @@ body{
     font-family: 'Courier New', Courier, monospace;
     line-height: 30px;
     text-align: center;
-    cursor: pointer;
+    cursor: help;
     transform: scale(0, 0);
     transition: transform 0.3s;
 }
@@ -69,4 +69,60 @@ body{
     line-height: 1.3em;
     opacity: 0;
     pointer-events: none;
+}
+
+.right-angle{
+    position: absolute;
+    top: 50%;
+    right: 2%;
+}
+
+.right-angle .label{
+    position: absolute;
+    top: -20px;
+    left: -20px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #d5d5d577;
+    color: #ffffff;
+    /* font-family: 'Courier New', Courier, monospace; */
+    font-weight: 800;
+    line-height: 30px;
+    text-align: center;
+    cursor: pointer;
+    transform: scale(0, 0);
+    transition: transform 0.3s;
+}
+
+.right-angle.visible .label{
+    transform: scale(1, 1);
+}
+
+.left-angle{
+    position: absolute;
+    top: 50%;
+    left: 2%;
+}
+
+.left-angle .label{
+    position: absolute;
+    top: -20px;
+    left: -20px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #d5d5d577;
+    color: #ffffff;
+    /* font-family: 'Courier New', Courier, monospace; */
+    font-weight: 800;
+    line-height: 30px;
+    text-align: center;
+    cursor: pointer;
+    transform: scale(0, 0);
+    transition: transform 0.3s;
+}
+
+.left-angle.visible .label{
+    transform: scale(1, 1);
 }

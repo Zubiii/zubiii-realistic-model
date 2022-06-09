@@ -135,6 +135,11 @@ scene.environment = environmentMap
  */
 const raycaster = new Raycaster()
 
+/**
+ * fetch Move right
+ */
+const rightMove = document.querySelector('.right-angle')
+
  /**
   * Points of Intrest
   */
@@ -194,6 +199,7 @@ const Animation = () => {
     if(sceneReady){
         // Control the points 
         for(const point of points){
+            // console.log("Point:", point);
             const screenPosition = point.position.clone()
             screenPosition.project(camera)
             // console.log("screenPosition: ", screenPosition)
@@ -222,6 +228,9 @@ const Animation = () => {
             point.element.style.transform = `translateX(${translateX}px) translateY(${translateY}px)`
             // console.log("translateX:", translateX);
         }
+
+        // Let's visible right angle
+        rightMove.classList.add('visible')
     }
 
     renderer.render(scene, camera)
